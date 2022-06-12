@@ -244,8 +244,8 @@ st.set_page_config(page_title=apptitle,page_icon="🌊")
 
 ## Main Header
 st.title("Argo BV")
-st.markdown("This app downloads [Argo](https://argo.ucsd.edu/) profile data for a specified region and date range. The data is then processed to show representative temperature, salinity,and Brunt-Väisälä (BV) frequency (calculated from the gsw toolbox). Look at the code [here](https://github.com/st-howard/ArgoBV)")
-
+st.markdown("This app downloads Argo profile data for a specified region and date range. The data is then processed to show representative temperature, salinity,and Brunt-Väisälä (BV) frequency (calculated from the gsw toolbox). Look at the code [here](https://github.com/st-howard/ArgoBV)")
+st.markdown("*Note*: If __Get Data__ fails, try again or reduce data from query")
 
 ## Sidebar
 with st.sidebar:
