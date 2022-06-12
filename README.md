@@ -31,5 +31,5 @@ Once the data is loaded, clicking the __Download Report__ button at the bottom o
 The app can be run locally
 1. Creating a virtual python environment
 2. Cloning the repo
-3. Install via `{pip install -r requirements.txt}`
-4. Run with `{streamlit run ArgoBV.py}`
+3. Install dependencies via `pip install -r requirements.txt`
+4. Run with `streamlit run ArgoBV.py`
