@@ -668,8 +668,8 @@ if 'data' in st.session_state:
         rangeString=" <i>Winter</i>: Days 355-79, <i>Spring</i>: Days 80-171, <i>Summer</i>: Days 172-263, <i>Fall</i>: Days 264-354"
         numProfString=f"<i>Winter</i>: {sum(profilesDF['Season']=='Winter')}, <i>Spring</i>: {sum(profilesDF['Season']=='Spring')}, <i>Summer</i>: {sum(profilesDF['Season']=='Summer')}, <i>Fall</i>: {sum(profilesDF['Season']=='Fall')}"
     elif rangeSelection=='Custom':
-        rangeString=f"{timeRange[0].strftime('%MMM %d')} to {timeRange[1].strftime('%MMM %d')}"
-        numProfString=f"__{int(sum(inTimeRange))}__ profiles between {timeRange[0].strftime('%b %d')} and {timeRange[1].strftime('%b %d')}"
+        rangeString=f" {timeRange[0].strftime('%b %d')} to {timeRange[1].strftime('%b %d')}"
+        numProfString=f"{int(sum(inTimeRange))} profiles between {timeRange[0].strftime('%b %d')} and {timeRange[1].strftime('%b %d')}"
 
     bv_options_string=""
     if showPercentiles:
@@ -698,8 +698,8 @@ if 'data' in st.session_state:
             """+mapFig.to_html(full_html=False)+"""
             
             <h4><b>Number of Profiles: </b> """+ numProfString+ """</h4>
-            <h4>"""+f"<b>Data Range:</b>{startDate.strftime('%m/%d/%Y')} to {endDate.strftime('%m/%d/%Y')}"+"""</h4>
-            <h4>"""+f"<b>Depth Range:</b> {int(depthRange[0])}db to {int(depthRange[1])}db"+"""</h4>
+            <h4>"""+f"<b>Data Range:</b> {startDate.strftime('%m/%d/%Y')} to {endDate.strftime('%m/%d/%Y')}"+"""</h4>
+            <h4>"""+f"<b>Depth Range:</b> {int(depthRange[0])} db to {int(depthRange[1])} db"+"""</h4>
             <h4>"""+"<b>Time Range:</b>"+rangeString+"""<h4>
             <h5> Retrieved with the <a href="https://argopy.readthedocs.io/en/latest/#">argopy</a> package</h5>
 
