@@ -32,4 +32,4 @@ The app can be run locally
 1. Creating a virtual python environment
 2. Cloning the repo
 3. Install via `{pip install -r requirements.txt}`
-3. Run with `{streamlit run ArgoBV.py}`
+4. Run with `{streamlit run ArgoBV.py}`
