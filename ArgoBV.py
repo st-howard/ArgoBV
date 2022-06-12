@@ -244,7 +244,7 @@ st.set_page_config(page_title=apptitle,page_icon="🌊")
 
 ## Main Header
 st.title("Argo BV")
-st.markdown("This app downloads [Argo](https://argo.ucsd.edu/) profile data for a specified region and date range. The data is then processed to show representative temperature, salinity,and Brunt-Väisälä (BV) frequency (calculated from the gsw toolbox).")
+st.markdown("This app downloads [Argo](https://argo.ucsd.edu/) profile data for a specified region and date range. The data is then processed to show representative temperature, salinity,and Brunt-Väisälä (BV) frequency (calculated from the gsw toolbox). Look at the code [here](https://github.com/st-howard/ArgoBV)")
 
 
 ## Sidebar
@@ -662,10 +662,14 @@ with salCol:
        
 # Generate a HTML report
 if 'data' in st.session_state:
+
+    #Create string for 
     if rangeSelection=='Seasons':
         rangeString=" <i>Winter</i>: Days 355-79, <i>Spring</i>: Days 80-171, <i>Summer</i>: Days 172-263, <i>Fall</i>: Days 264-354"
+        numProfString=f"<i>Winter</i>: {sum(profilesDF['Season']=='Winter')}, <i>Spring</i>: {sum(profilesDF['Season']=='Spring')}, <i>Summer</i>: {sum(profilesDF['Season']=='Summer')}, <i>Fall</i>: {sum(profilesDF['Season']=='Fall')}"
     elif rangeSelection=='Custom':
         rangeString=f"{timeRange[0].strftime('%MMM %d')} to {timeRange[1].strftime('%MMM %d')}"
+        numProfString=f"__{int(sum(inTimeRange))}__ profiles between {timeRange[0].strftime('%b %d')} and {timeRange[1].strftime('%b %d')}"
 
     bv_options_string=""
     if showPercentiles:
@@ -677,6 +681,8 @@ if 'data' in st.session_state:
     if lowPassOn:
         bv_options_string=bv_options_string+"""<h4><b>Smoothing: </b> Low Pass filter with """+f"{lowPassCutoff}m cutoff" + """ applied </h4>
         """
+
+
 
     html_string="""
     <html>
@@ -691,6 +697,7 @@ if 'data' in st.session_state:
             <h2><b>Profile Locations</b></h2>
             """+mapFig.to_html(full_html=False)+"""
             
+            <h4><b>Number of Profiles: </b> """+ numProfString+ """</h4>
             <h4>"""+f"<b>Data Range:</b>{startDate.strftime('%m/%d/%Y')} to {endDate.strftime('%m/%d/%Y')}"+"""</h4>
             <h4>"""+f"<b>Depth Range:</b> {int(depthRange[0])}db to {int(depthRange[1])}db"+"""</h4>
             <h4>"""+"<b>Time Range:</b>"+rangeString+"""<h4>
