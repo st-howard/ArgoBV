@@ -25,3 +25,11 @@ Once the data is loaded, clicking the __Download Report__ button at the bottom o
     - Bounding boxes that cross from 180W to 180E
     - Custom date ranges that pass through Dec 31/Jan 1
 - Currently, cannot download the raw data retrieved by the query. Definitely something to add, but had trouble figuring out how to download netcdf files through streamlit.
+
+# Run locally
+
+The app can be run locally
+1. Creating a virtual python environment
+2. Cloning the repo
+3. Install via `{pip install -r requirements.txt}`
+3. Run with `{streamlit run ArgoBV.py}`
