@@ -407,15 +407,15 @@ with BVContainer:
         with peakAlignedCol:
             peakAlign=st.checkbox('Peak Align',value=False)
             if peakAlign:
-                minAlignDepth=st.number_input('Min Peak Depth',value=10,min_value=0,max_value=500)
-                maxAlignDepth=st.number_input('Max Peak Depth',value=100,min_value=0,max_value=500)
+                minAlignDepth=st.number_input('Min Peak Depth (m)',value=10,min_value=0,max_value=500)
+                maxAlignDepth=st.number_input('Max Peak Depth (m)',value=100,min_value=0,max_value=500)
                 #make sure the are ordered
                 if minAlignDepth>maxAlignDepth:
                     minAlignDepth,maxAlignDepth=maxAlignDepth,minAlignDepth
         with lowPassCol:
             lowPassOn=st.checkbox('Apply Low Pass Filter',value=False)
             if lowPassOn:
-                lowPassCutoff=st.number_input('Low Pass Cutoff',value=10,min_value=2,max_value=50)
+                lowPassCutoff=st.number_input('Low Pass Cutoff (m)',value=10,min_value=2,max_value=50)
 
     ## Make the BV plots
     if 'data' in st.session_state:
@@ -659,4 +659,59 @@ with salCol:
         xaxis=dict(title="Practical Salinity") ) 
         st.plotly_chart(salFig,use_container_width=True)
 
-        
+       
+# Generate a HTML report
+if 'data' in st.session_state:
+    if rangeSelection=='Seasons':
+        rangeString=" <i>Winter</i>: Days 355-79, <i>Spring</i>: Days 80-171, <i>Summer</i>: Days 172-263, <i>Fall</i>: Days 264-354"
+    elif rangeSelection=='Custom':
+        rangeString=f"{timeRange[0].strftime('%MMM %d')} to {timeRange[1].strftime('%MMM %d')}"
+
+    bv_options_string=""
+    if showPercentiles:
+        bv_options_string=bv_options_string+"""<h4><b>Percentiles: </b>"""+f"{minPct}% to {maxPct}%"+"""</h4>
+        """
+    if peakAlign:
+        bv_options_string=bv_options_string+"""<h4><b>Peak Align</b>: Profiles are peak aligned with peaks between """+f"{minAlignDepth}m and {maxAlignDepth}m"+""" </h4> 
+        """
+    if lowPassOn:
+        bv_options_string=bv_options_string+"""<h4><b>Smoothing: </b> Low Pass filter with """+f"{lowPassCutoff}m cutoff" + """ applied </h4>
+        """
+
+    html_string="""
+    <html>
+        <head>
+            <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
+            <style>body{ margin:0 100; background:whitesmoke; }</style>
+        </head>
+        <body>
+            <h1>"""+f"BV report for {abs(minLat):.2f}{'°N' if minLat>0 else '°S'}-{abs(maxLat):.2f}{'°N' if maxLat>0 else '°S'} {abs(minLon):.2f}{'°W' if minLon<0 else '°E'}-{abs(maxLon):.2f}{'°W' if maxLon<0 else '°E'}"+"""</h1>
+
+            <!-- *** Map figure *** --->
+            <h2><b>Profile Locations</b></h2>
+            """+mapFig.to_html(full_html=False)+"""
+            
+            <h4>"""+f"<b>Data Range:</b>{startDate.strftime('%m/%d/%Y')} to {endDate.strftime('%m/%d/%Y')}"+"""</h4>
+            <h4>"""+f"<b>Depth Range:</b> {int(depthRange[0])}db to {int(depthRange[1])}db"+"""</h4>
+            <h4>"""+"<b>Time Range:</b>"+rangeString+"""<h4>
+            <h5> Retrieved with the <a href="https://argopy.readthedocs.io/en/latest/#">argopy</a> package</h5>
+
+            <!--- *** BV Figure ***--->
+            """+BV_Fig.to_html(full_html=False)+"""
+            """+bv_options_string+"""
+
+            <!--- *** Temp Figure ***--->
+            """+tempFig.to_html(full_html=False)+"""
+
+            <!--- *** Salinity Figure *** --->
+            """+salFig.to_html(full_html=False)+"""
+
+        </body>
+    </html>
+    """
+    st.download_button(
+        'Download Report',
+        html_string,
+        file_name="ArgoReport.html",
+        mime='text/html'
+    )
