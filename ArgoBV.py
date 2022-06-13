@@ -206,24 +206,27 @@ def processDataFrame(DF,depthMax=500):
         else:
             firstNaN=len(SA)
 
-        SA_filt=lowpassFilt(SA[0:firstNaN],cutoff=10,deltaZ=1)
-        CT_filt=lowpassFilt(CT[0:firstNaN],cutoff=10,deltaZ=1)      
-        
-        # 4
-        N2,pmid=gsw.Nsquared(SA_filt,CT_filt,P_prof[0:firstNaN],lat=DF["LATITUDE"].iloc[i])
-        
-        # 5
-        BV_cph_pmid=(3600/(2*np.pi))*np.sqrt(abs(N2))
-        BV_cph_pmid[BV_cph_pmid<0.3]=0.3
+        if firstNaN >2:
+            SA_filt=lowpassFilt(SA[0:firstNaN],cutoff=10,deltaZ=1)
+            CT_filt=lowpassFilt(CT[0:firstNaN],cutoff=10,deltaZ=1)      
+            
+            # 4
+            N2,pmid=gsw.Nsquared(SA_filt,CT_filt,P_prof[0:firstNaN],lat=DF["LATITUDE"].iloc[i])
+            
+            # 5
+            BV_cph_pmid=(3600/(2*np.pi))*np.sqrt(abs(N2))
+            BV_cph_pmid[BV_cph_pmid<0.3]=0.3
 
-        # 6
-        zmid=abs(gsw.z_from_p(pmid,DF["LATITUDE"].iloc[i]))
-        BV_cph=np.interp(
-                depthUniform,
-                zmid[(~np.isnan(BV_cph_pmid)) & np.isfinite(BV_cph_pmid)],
-                BV_cph_pmid[(~np.isnan(BV_cph_pmid)) & np.isfinite(BV_cph_pmid)]
-            )
-        DF["BV_cph"].iloc[i]=BV_cph
+            # 6
+            zmid=abs(gsw.z_from_p(pmid,DF["LATITUDE"].iloc[i]))
+            BV_cph=np.interp(
+                    depthUniform,
+                    zmid[(~np.isnan(BV_cph_pmid)) & np.isfinite(BV_cph_pmid)],
+                    BV_cph_pmid[(~np.isnan(BV_cph_pmid)) & np.isfinite(BV_cph_pmid)]
+                )
+            DF["BV_cph"].iloc[i]=BV_cph
+        else:
+            DF["BV_cph"].iloc[i]=np.nan(depthUniform.shape)
 
     
 
@@ -324,7 +327,8 @@ with timeRangeContainer:
         startDate=datetime.date(year=2001,month=1,day=1)
         endDate=datetime.date(year=2001,month=12,day=31)
         timeRange=st.slider('Select Time Range',min_value=startDate,max_value=endDate,value=(startDate,endDate),format=date_format)
-        inTimeRange=profilesDF["TIME"].apply(lambda x: True if (x.dayofyear>timeRange[0].timetuple().tm_yday and x.dayofyear<timeRange[1].timetuple().tm_yday) else False)
+        if 'data' in st.session_state:
+            inTimeRange=profilesDF["TIME"].apply(lambda x: True if (x.dayofyear>timeRange[0].timetuple().tm_yday and x.dayofyear<timeRange[1].timetuple().tm_yday) else False)
 
 with mapContainter:
     # Map with the region and profile locations
@@ -668,7 +672,7 @@ if 'data' in st.session_state:
         rangeString=" <i>Winter</i>: Days 355-79, <i>Spring</i>: Days 80-171, <i>Summer</i>: Days 172-263, <i>Fall</i>: Days 264-354"
         numProfString=f"<i>Winter</i>: {sum(profilesDF['Season']=='Winter')}, <i>Spring</i>: {sum(profilesDF['Season']=='Spring')}, <i>Summer</i>: {sum(profilesDF['Season']=='Summer')}, <i>Fall</i>: {sum(profilesDF['Season']=='Fall')}"
     elif rangeSelection=='Custom':
-        rangeString=f" {timeRange[0].strftime('%b %d')} to {timeRange[1].strftime('%b %d')}"
+        rangeString=f"{timeRange[0].strftime('%b %d')} to {timeRange[1].strftime('%b %d')}"
         numProfString=f"{int(sum(inTimeRange))} profiles between {timeRange[0].strftime('%b %d')} and {timeRange[1].strftime('%b %d')}"
 
     bv_options_string=""
@@ -699,7 +703,7 @@ if 'data' in st.session_state:
             
             <h4><b>Number of Profiles: </b> """+ numProfString+ """</h4>
             <h4>"""+f"<b>Data Range:</b> {startDate.strftime('%m/%d/%Y')} to {endDate.strftime('%m/%d/%Y')}"+"""</h4>
-            <h4>"""+f"<b>Depth Range:</b> {int(depthRange[0])} db to {int(depthRange[1])} db"+"""</h4>
+            <h4>"""+f"<b>Depth Range:</b> {int(depthRange[0])}db to {int(depthRange[1])}db"+"""</h4>
             <h4>"""+"<b>Time Range:</b>"+rangeString+"""<h4>
             <h5> Retrieved with the <a href="https://argopy.readthedocs.io/en/latest/#">argopy</a> package</h5>
 
