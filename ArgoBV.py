@@ -66,7 +66,12 @@ def lowpassFilt(dataVec,cutoff=10,deltaZ=1,removeNaNs=False):
     
     return filtfilt(b_Numerator,a_Denomoniator,dataVec)
 
-
+def encodeNetCDF(ds_profiles):
+    ds_profiles=ds_profiles.drop_vars(["DATA_MODE","DIRECTION"])
+    ds_profiles.attrs["Fetched_constraints"]="none"
+    ds_profiles.attrs["Fetched_uri"]=ds_profiles.attrs["Fetched_uri"][0]
+    print(ds_profiles)
+    return ds_profiles.to_netcdf()
 
 ## Define the data retrieval function
 @st.experimental_memo(max_entries=1)
@@ -89,10 +94,7 @@ def getArgoData(min_lon,max_lon,min_lat,max_lat,min_depth,max_depth,start_date,e
 
     ds_profiles=ds.argo.point2profile()
 
-    if 'netcdf' in st.session_state:
-        st.session_state.netcdf=ds_profiles
-    else:
-        st.session_state.netcdf=ds_profiles
+    st.session_state.netcdf=ds_profiles
 
     ## Turn the dataset into a pandas dataframe so it can be cached
     num_profiles=ds_profiles.dims.get('N_PROF')
@@ -113,12 +115,6 @@ def getArgoData(min_lon,max_lon,min_lat,max_lat,min_depth,max_depth,start_date,e
     return profilesDF
 
 ## Function to process dataframe for plotting
-
-# TODO
-# 1. Interpolate TEMP, PRES, PSAL to uniform grid (add column)
-# 2. Add column for season 
-# 3. Add column for gsw depth
-# 4. Add column for gsw BV in cph (set min value at ~0.3 cph)
 
 def processDataFrame(DF,depthMax=500):
     '''
@@ -235,9 +231,6 @@ def processDataFrame(DF,depthMax=500):
 
 
 
-
-
-
 ### Page layout
 
 # -- Set page config
@@ -294,9 +287,6 @@ with st.sidebar:
                     st.session_state.data=profilesDF
                 
             
-## Main panel
-if 'data' in st.session_state:
-    profilesDF=st.session_state.data
 
 #Layout of main panel in container
 mapContainter=st.container()
@@ -360,6 +350,7 @@ with mapContainter:
     ))
 
     if 'data' in st.session_state:
+        profilesDF=st.session_state.data
         seasonsDF=np.unique(profilesDF['Season'])
         
         if rangeSelection=='Seasons':
@@ -387,6 +378,7 @@ with mapContainter:
 
     ## List total number of profiles
     if 'data' in st.session_state:
+        profilesDF=st.session_state.data
         if rangeSelection=='Seasons':
             st.markdown("__Number of Profiles__")
             st.write(pd.DataFrame([np.array([int(profilesDF.shape[0]),
@@ -401,6 +393,7 @@ with mapContainter:
 with BVContainer:
     #options on BV plot
     if 'data'in st.session_state:
+        profilesDF=st.session_state.data
         st.markdown("__BV Plot options__")
         percentileCol,peakAlignedCol,lowPassCol=st.columns(3)
         with percentileCol:
@@ -423,140 +416,141 @@ with BVContainer:
 
     ## Make the BV plots
     if 'data' in st.session_state:
-            BV_Fig=go.Figure(go.Line())
-            if rangeSelection=='Seasons':
-                for thisSeason in np.unique(profilesDF["Season"]):
-                    if seasonDict.get(thisSeason):
-                        seasonDF=profilesDF[profilesDF["Season"]==thisSeason]
-                        depthVec=seasonDF["Depth_uniform"].iloc[0]
-                        BV_Cont=[]
-                        for i in range(seasonDF.shape[0]):
-                            BV_Cont.append(seasonDF["BV_cph"].iloc[i])
-                
-                        if peakAlign:
-                            BV_Cont=peakAlignProfile(BV_Cont,
-                            depthVec=depthVec,
-                            minPeakDepth=minAlignDepth,
-                            maxPeakDepth=maxAlignDepth)
-
-                        BV_Vec=np.nanmedian(np.array(BV_Cont),axis=0)
-                        if lowPassOn:
-                            BV_Vec=lowpassFilt(BV_Vec,cutoff=lowPassCutoff,deltaZ=1)
-
-                        BV_Fig.add_trace(go.Scatter(
-                            x=BV_Vec,
-                            y=depthVec,
-                            mode='lines',
-                            name=thisSeason,
-                            line_color=seasonColor.get(thisSeason)
-                            )
-                        )
-                        if showPercentiles:
-                            BV_Vec_plus=np.nanpercentile(np.array(BV_Cont),maxPct,axis=0)
-                            BV_Vec_minus=np.nanpercentile(np.array(BV_Cont),minPct,axis=0)
-                            if lowPassOn:
-                                BV_Vec_plus=lowpassFilt(BV_Vec_plus,cutoff=lowPassCutoff,deltaZ=1)
-                                BV_Vec_minus=lowpassFilt(BV_Vec_minus,cutoff=lowPassCutoff,deltaZ=1)
-
-                            
-                            BV_Fig.add_traces(
-                                go.Scatter(x=BV_Vec_minus,
-                                y=depthVec,
-                                line=dict(color=seasonColor.get(thisSeason)[0:-2]+"0.2)"),
-                                fill='tonextx',
-                                fillcolor=seasonColor.get(thisSeason)[0:-2]+"0.1)"
-                                )
-                            )
-
-                            BV_Fig.add_trace(go.Scatter(
-                                x=BV_Vec,
-                                y=depthVec,
-                                mode='lines',
-                                line_color=seasonColor.get(thisSeason)
-                                )
-                            )
-
-
-                            BV_Fig.add_traces(
-                                go.Scatter(x=BV_Vec_plus,
-                                y=depthVec,
-                                line=dict(color=seasonColor.get(thisSeason)[0:-2]+"0.2)"),
-                                fill='tonextx',
-                                fillcolor=seasonColor.get(thisSeason)[0:-2]+"0.1)"
-                                )
-                            )
-
-            elif rangeSelection=='Custom':
-                customDF=profilesDF[inTimeRange]
-                depthVec=customDF["Depth_uniform"].iloc[0]
-                BV_Cont=[]
-                for i in range(customDF.shape[0]):
-                    BV_Cont.append(customDF["BV_cph"].iloc[i])
-
-                if peakAlign:
-                    BV_Cont=peakAlignProfile(BV_Cont,
+        profilesDF=st.session_state.data
+        BV_Fig=go.Figure(go.Line())
+        if rangeSelection=='Seasons':
+            for thisSeason in np.unique(profilesDF["Season"]):
+                if seasonDict.get(thisSeason):
+                    seasonDF=profilesDF[profilesDF["Season"]==thisSeason]
+                    depthVec=seasonDF["Depth_uniform"].iloc[0]
+                    BV_Cont=[]
+                    for i in range(seasonDF.shape[0]):
+                        BV_Cont.append(seasonDF["BV_cph"].iloc[i])
+            
+                    if peakAlign:
+                        BV_Cont=peakAlignProfile(BV_Cont,
                         depthVec=depthVec,
                         minPeakDepth=minAlignDepth,
                         maxPeakDepth=maxAlignDepth)
 
-                BV_Vec=np.nanmedian(np.array(BV_Cont),axis=0)
-                if lowPassOn:
-                    BV_Vec=lowpassFilt(BV_Vec,cutoff=lowPassCutoff,deltaZ=1)
-
-                BV_Fig.add_trace(go.Scatter(
-                    x=BV_Vec,
-                    y=depthVec,
-                    mode='lines',
-                    line_color=customColor,
-                    name=f"{timeRange[0].strftime('%b %d')} to {timeRange[1].strftime('%b %d')}",
-                  )
-                )
-
-                if showPercentiles:
-                    BV_Vec_plus=np.nanpercentile(np.array(BV_Cont),maxPct,axis=0)
-                    BV_Vec_minus=np.nanpercentile(np.array(BV_Cont),minPct,axis=0)
+                    BV_Vec=np.nanmedian(np.array(BV_Cont),axis=0)
                     if lowPassOn:
-                        BV_Vec_plus=lowpassFilt(BV_Vec_plus,cutoff=lowPassCutoff,deltaZ=1)
-                        BV_Vec_minus=lowpassFilt(BV_Vec_minus,cutoff=lowPassCutoff,deltaZ=1)
-
-                    
-                    BV_Fig.add_traces(
-                        go.Scatter(x=BV_Vec_minus,
-                        y=depthVec,
-                        line=dict(color=customColor[0:-2]+"0.2)"),
-                        fill='tonextx',
-                        fillcolor=customColor[0:-2]+"0.1)"
-                        )
-                    )
+                        BV_Vec=lowpassFilt(BV_Vec,cutoff=lowPassCutoff,deltaZ=1)
 
                     BV_Fig.add_trace(go.Scatter(
                         x=BV_Vec,
                         y=depthVec,
                         mode='lines',
-                        line_color=customColor
+                        name=thisSeason,
+                        line_color=seasonColor.get(thisSeason)
                         )
                     )
+                    if showPercentiles:
+                        BV_Vec_plus=np.nanpercentile(np.array(BV_Cont),maxPct,axis=0)
+                        BV_Vec_minus=np.nanpercentile(np.array(BV_Cont),minPct,axis=0)
+                        if lowPassOn:
+                            BV_Vec_plus=lowpassFilt(BV_Vec_plus,cutoff=lowPassCutoff,deltaZ=1)
+                            BV_Vec_minus=lowpassFilt(BV_Vec_minus,cutoff=lowPassCutoff,deltaZ=1)
 
-
-                    BV_Fig.add_traces(
-                        go.Scatter(x=BV_Vec_plus,
-                        y=depthVec,
-                        line=dict(color=customColor[0:-2]+"0.2)"),
-                        fill='tonextx',
-                        fillcolor=customColor[0:-2]+"0.1)"
+                        
+                        BV_Fig.add_traces(
+                            go.Scatter(x=BV_Vec_minus,
+                            y=depthVec,
+                            line=dict(color=seasonColor.get(thisSeason)[0:-2]+"0.2)"),
+                            fill='tonextx',
+                            fillcolor=seasonColor.get(thisSeason)[0:-2]+"0.1)"
+                            )
                         )
+
+                        BV_Fig.add_trace(go.Scatter(
+                            x=BV_Vec,
+                            y=depthVec,
+                            mode='lines',
+                            line_color=seasonColor.get(thisSeason)
+                            )
+                        )
+
+
+                        BV_Fig.add_traces(
+                            go.Scatter(x=BV_Vec_plus,
+                            y=depthVec,
+                            line=dict(color=seasonColor.get(thisSeason)[0:-2]+"0.2)"),
+                            fill='tonextx',
+                            fillcolor=seasonColor.get(thisSeason)[0:-2]+"0.1)"
+                            )
+                        )
+
+        elif rangeSelection=='Custom':
+            customDF=profilesDF[inTimeRange]
+            depthVec=customDF["Depth_uniform"].iloc[0]
+            BV_Cont=[]
+            for i in range(customDF.shape[0]):
+                BV_Cont.append(customDF["BV_cph"].iloc[i])
+
+            if peakAlign:
+                BV_Cont=peakAlignProfile(BV_Cont,
+                    depthVec=depthVec,
+                    minPeakDepth=minAlignDepth,
+                    maxPeakDepth=maxAlignDepth)
+
+            BV_Vec=np.nanmedian(np.array(BV_Cont),axis=0)
+            if lowPassOn:
+                BV_Vec=lowpassFilt(BV_Vec,cutoff=lowPassCutoff,deltaZ=1)
+
+            BV_Fig.add_trace(go.Scatter(
+                x=BV_Vec,
+                y=depthVec,
+                mode='lines',
+                line_color=customColor,
+                name=f"{timeRange[0].strftime('%b %d')} to {timeRange[1].strftime('%b %d')}",
+                )
+            )
+
+            if showPercentiles:
+                BV_Vec_plus=np.nanpercentile(np.array(BV_Cont),maxPct,axis=0)
+                BV_Vec_minus=np.nanpercentile(np.array(BV_Cont),minPct,axis=0)
+                if lowPassOn:
+                    BV_Vec_plus=lowpassFilt(BV_Vec_plus,cutoff=lowPassCutoff,deltaZ=1)
+                    BV_Vec_minus=lowpassFilt(BV_Vec_minus,cutoff=lowPassCutoff,deltaZ=1)
+
+                
+                BV_Fig.add_traces(
+                    go.Scatter(x=BV_Vec_minus,
+                    y=depthVec,
+                    line=dict(color=customColor[0:-2]+"0.2)"),
+                    fill='tonextx',
+                    fillcolor=customColor[0:-2]+"0.1)"
                     )
+                )
+
+                BV_Fig.add_trace(go.Scatter(
+                    x=BV_Vec,
+                    y=depthVec,
+                    mode='lines',
+                    line_color=customColor
+                    )
+                )
+
+
+                BV_Fig.add_traces(
+                    go.Scatter(x=BV_Vec_plus,
+                    y=depthVec,
+                    line=dict(color=customColor[0:-2]+"0.2)"),
+                    fill='tonextx',
+                    fillcolor=customColor[0:-2]+"0.1)"
+                    )
+                )
 
 
 
-            for trace in BV_Fig["data"]:
-                if(trace['name'] not in seasonColor.keys()): trace['showlegend']=False
+        for trace in BV_Fig["data"]:
+            if(trace['name'] not in seasonColor.keys()): trace['showlegend']=False
 
-            BV_Fig.update_layout(yaxis_range=[200,0],
-            title="BV frequency profiles",
-            yaxis=dict(title="Depth (m)"),
-            xaxis=dict(title="BV (cph)") ) 
-            st.plotly_chart(BV_Fig,use_container_width=True)      
+        BV_Fig.update_layout(yaxis_range=[200,0],
+        title="BV frequency profiles",
+        yaxis=dict(title="Depth (m)"),
+        xaxis=dict(title="BV (cph)") ) 
+        st.plotly_chart(BV_Fig,use_container_width=True)      
 
 
 ## Plots within main panel
@@ -564,6 +558,7 @@ tempCol,salCol=st.columns(2)
 
 with tempCol:
     if 'data' in st.session_state:
+        profilesDF=st.session_state.data
         tempFig=go.Figure(go.Line())
         if rangeSelection=='Seasons':
             for thisSeason in np.unique(profilesDF["Season"]):
@@ -725,4 +720,10 @@ if 'data' in st.session_state:
         html_string,
         file_name="ArgoReport.html",
         mime='text/html'
+    )
+
+    st.download_button(
+        label="Download Data",
+        data=encodeNetCDF(st.session_state.netcdf),
+        file_name='argo_data.nc'
     )
