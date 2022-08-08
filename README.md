@@ -24,7 +24,6 @@ Once the data is loaded, clicking the __Download Report__ button at the bottom o
 - There are some obvious edge cases that need to be dealt:
     - Bounding boxes that cross from 180W to 180E
     - Custom date ranges that pass through Dec 31/Jan 1
-- Currently, cannot download the raw data retrieved by the query. Definitely something to add, but had trouble figuring out how to download netcdf files through streamlit.
 
 # Run locally
 
